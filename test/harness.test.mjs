@@ -175,7 +175,7 @@ describe('harness: supporting files', () => {
   });
 
   it('includes required documentation and evidence files', () => {
-    for (const file of ['README.md', 'RUNBOOK.md', 'evidence/VERIFY.md']) {
+    for (const file of ['README.md', 'RUNBOOK.md', 'ADR.md', 'evidence/VERIFY.md']) {
       assert.ok(statSync(join(ROOT, file)).isFile(), `missing ${file}`);
     }
   });

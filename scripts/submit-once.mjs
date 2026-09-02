@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** One-shot submit using SUBMIT_PREVIEW.json — avoids waiting for MCP reload. */
+/** One-shot submit using SUBMIT_PREVIEW.json — requires CALIBER_SUBMIT_OK=1. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,41 @@ const mcpPath = path.resolve(
   "../../.cursor/mcp.json",
 );
 
+if (process.env.CALIBER_SUBMIT_OK !== "1") {
+  console.error(
+    "Refusing to submit: set CALIBER_SUBMIT_OK=1 after reviewing SUBMIT_PREVIEW.json",
+  );
+  process.exit(1);
+}
+
+const p = JSON.parse(fs.readFileSync(previewPath, "utf8"));
+const code = p.code ?? "";
+const notes = p.answer ?? "";
+
+if (code.length < 5000) {
+  console.error("Refusing: code field too short (<5000 chars) — likely incomplete pack");
+  process.exit(1);
+}
+if (/placeholder/i.test(code) || /placeholder/i.test(notes)) {
+  console.error('Refusing: payload contains "placeholder"');
+  process.exit(1);
+}
+if (!Array.isArray(p.promptLogs) || p.promptLogs.length < 3) {
+  console.error("Refusing: need at least 3 promptLogs");
+  process.exit(1);
+}
+if (!notes.includes("github.com/MOHITTHAKUR002/iac-prod-northline")) {
+  console.error("Refusing: GitHub URL missing from notes");
+  process.exit(1);
+}
+const planPath = path.join(path.dirname(previewPath), "evidence/plan.txt");
+if (
+  fs.existsSync(planPath) &&
+  !(/^Plan:\s*\d+/m.test(fs.readFileSync(planPath, "utf8")))
+) {
+  console.warn("WARN: evidence/plan.txt lacks real terraform plan output (Plan: N to add)");
+}
+
 const token = JSON.parse(fs.readFileSync(mcpPath, "utf8")).mcpServers.caliber
   .env.CALIBER_TOKEN;
 const apiUrl = (
@@ -20,7 +55,6 @@ const apiUrl = (
     .CALIBER_API_URL ?? "https://caliber.antiers.work"
 ).replace(/\/$/, "");
 
-const p = JSON.parse(fs.readFileSync(previewPath, "utf8"));
 const payload = {
   moduleId: p.moduleId,
   content: {
@@ -29,7 +63,9 @@ const payload = {
   },
   promptLogs: p.promptLogs,
 };
-if (p.mergeRequestUrl) payload.mergeRequestUrl = p.mergeRequestUrl;
+if (p.mergeRequestUrl && p.mergeRequestUrl.includes("repo.antiersolutions.com")) {
+  payload.mergeRequestUrl = p.mergeRequestUrl;
+}
 
 console.log(
   "Submitting:",
