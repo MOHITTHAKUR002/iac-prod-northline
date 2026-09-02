@@ -1,0 +1,12 @@
+{
+  "name": "iac-prod",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Northline production IaC — Terraform modules, API, and invariant tests",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

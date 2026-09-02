@@ -1,0 +1,13 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+backend.hcl
+.terraform.lock.hcl
+*.tfvars
+!terraform.tfvars.example
+!terraform.tfvars.ci
+node_modules/
+.DS_Store
+*.log
+evidence/*.txt
+evidence/*.json
