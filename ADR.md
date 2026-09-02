@@ -26,7 +26,7 @@ Root `main.tf` wires modules only — no `resource` blocks at root.
 - RDS: `manage_master_user_password = true`, `publicly_accessible = false`
 - ECS: `user = "1000:1000"`, `readonlyRootFilesystem = true`, `/tmp` volume
 - IAM: execution role (ECR + logs + Secrets Manager) separate from task role (S3 assets + app logs only)
-- `ecs:RunTask` scoped with `Condition.ArnEquals.ecs:cluster`
+- Execution role limited to ECR/logs/secrets; task role scoped to S3 assets + app logs only
 
 ### Cost trade-offs (documented in RUNBOOK.md)
 

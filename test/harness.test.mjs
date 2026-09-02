@@ -81,10 +81,10 @@ describe('harness: security invariants', () => {
     assert.doesNotMatch(allTf, /AKIA[0-9A-Z]{16}/);
   });
 
-  it('IAM RunTask is scoped to cluster ARN', () => {
+  it('execution role has no ecs:RunTask permission', () => {
     const iam = read('modules/compute/iam.tf');
-    assert.match(iam, /"ecs:cluster"\s*=\s*aws_ecs_cluster\.main\.arn/);
-    assert.doesNotMatch(iam, /"\*"\s*\}\s*\}\s*\]\s*\}\)\s*$/m);
+    assert.doesNotMatch(iam, /ecs:RunTask/);
+    assert.doesNotMatch(iam, /ecs_events_run_task/);
   });
   it('exec role secrets policy is separate from managed policy', () => {
     const iam = read('modules/compute/iam.tf');
@@ -100,9 +100,17 @@ describe('harness: cost and HA choices', () => {
     assert.equal(natBlocks.length, 1);
   });
 
-  it('uses Fargate Spot capacity provider', () => {
+  it('uses Fargate Spot with on-demand base for HA', () => {
     const ecs = read('modules/compute/ecs.tf');
     assert.match(ecs, /FARGATE_SPOT/);
+    assert.match(ecs, /capacity_provider\s*=\s*"FARGATE"/);
+    assert.match(ecs, /base\s*=\s*1/);
+  });
+
+  it('alb.tf has no orphaned subnet data source', () => {
+    const alb = read('modules/compute/alb.tf');
+    assert.doesNotMatch(alb, /data\s+"aws_subnet"/);
+    assert.doesNotMatch(alb, /aws_ecs_service/);
   });
 
   it('validates ecs_desired_count >= 2', () => {

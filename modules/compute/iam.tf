@@ -91,27 +91,3 @@ resource "aws_iam_role_policy" "ecs_task" {
   role   = aws_iam_role.ecs_task.id
   policy = data.aws_iam_policy_document.ecs_task.json
 }
-
-resource "aws_iam_role_policy" "ecs_events_run_task" {
-  name = "${local.name_prefix}-ecs-events"
-  role = aws_iam_role.ecs_task_execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "RunTaskInCluster"
-        Effect = "Allow"
-        Action = ["ecs:RunTask"]
-        Resource = [
-          aws_ecs_task_definition.api.arn
-        ]
-        Condition = {
-          ArnEquals = {
-            "ecs:cluster" = aws_ecs_cluster.main.arn
-          }
-        }
-      }
-    ]
-  })
-}

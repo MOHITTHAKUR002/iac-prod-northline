@@ -11,14 +11,6 @@ resource "aws_security_group" "rds" {
     security_groups = [var.ecs_tasks_security_group_id]
   }
 
-  egress {
-    description = "All outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "${local.name_prefix}-rds-sg"
   }

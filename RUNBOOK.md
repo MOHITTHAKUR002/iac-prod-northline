@@ -60,7 +60,7 @@ Budget **~$132/mo** (README table). Chosen trade-offs:
 |--------|-------------|
 | **Single-AZ RDS** | **RPO ~5 minutes** data loss on AZ failure. **RTO 20–40 minutes**: alarm → restore from 7-day snapshot → ECS redeploy. |
 | **Single NAT** | NAT-AZ loss blocks general internet egress from other AZ; ECR/Secrets/Logs still via VPC endpoints. |
-| **Fargate Spot** | Spot reclaim: **1–3 min** at **50% capacity** (1 of 2 tasks) during replacement. |
+| **Fargate Spot (1 on-demand base)** | One task always on FARGATE; remainder on Spot. Worst case: both Spot tasks reclaimed together in an AZ crunch — **0% API capacity 1–3 min** until ECS replaces tasks. |
 
 ### Restore procedure (RDS AZ failure)
 

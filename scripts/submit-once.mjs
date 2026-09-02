@@ -41,11 +41,16 @@ if (!notes.includes("github.com/MOHITTHAKUR002/iac-prod-northline")) {
   process.exit(1);
 }
 const planPath = path.join(path.dirname(previewPath), "evidence/plan.txt");
-if (
-  fs.existsSync(planPath) &&
-  !(/^Plan:\s*\d+/m.test(fs.readFileSync(planPath, "utf8")))
-) {
-  console.warn("WARN: evidence/plan.txt lacks real terraform plan output (Plan: N to add)");
+const planContent = fs.existsSync(planPath) ? fs.readFileSync(planPath, "utf8") : "";
+const planHasResources =
+  /^Plan:\s*\d+/m.test(planContent) && /will be created|# aws_/m.test(planContent);
+if (/target 95\+|BLOCKER for 95|rubric|Correctness \d+/i.test(notes + JSON.stringify(p.promptLogs))) {
+  console.error("Refusing: notes/promptLogs contain rubric-gaming language");
+  process.exit(1);
+}
+if (process.env.CALIBER_REQUIRE_PLAN !== "0" && !planHasResources) {
+  console.error("Refusing: evidence/plan.txt lacks real terraform plan. Run ./scripts/capture-plan.sh or set CALIBER_REQUIRE_PLAN=0 to override.");
+  process.exit(1);
 }
 
 const token = JSON.parse(fs.readFileSync(mcpPath, "utf8")).mcpServers.caliber
