@@ -23,7 +23,13 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-data "aws_iam_policy_document" "ecs_task_execution_extra" {
+resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
+  name   = "${local.name_prefix}-ecs-exec-secrets"
+  role   = aws_iam_role.ecs_task_execution.id
+  policy = data.aws_iam_policy_document.ecs_task_execution_secrets.json
+}
+
+data "aws_iam_policy_document" "ecs_task_execution_secrets" {
   statement {
     sid    = "ReadAppSecrets"
     effect = "Allow"
@@ -33,12 +39,6 @@ data "aws_iam_policy_document" "ecs_task_execution_extra" {
     ]
     resources = ["arn:aws:secretsmanager:*:*:secret:${local.name_prefix}/*"]
   }
-}
-
-resource "aws_iam_role_policy" "ecs_task_execution_extra" {
-  name   = "${local.name_prefix}-ecs-exec-extra"
-  role   = aws_iam_role.ecs_task_execution.id
-  policy = data.aws_iam_policy_document.ecs_task_execution_extra.json
 }
 
 data "aws_iam_policy_document" "ecs_task_assume" {
@@ -90,59 +90,6 @@ resource "aws_iam_role_policy" "ecs_task" {
   name   = "${local.name_prefix}-ecs-task"
   role   = aws_iam_role.ecs_task.id
   policy = data.aws_iam_policy_document.ecs_task.json
-}
-
-resource "aws_iam_role" "ecs_service_linked" {
-  name = "${local.name_prefix}-ecs-service-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-data "aws_iam_policy_document" "ecs_service" {
-  statement {
-    sid    = "RegisterTargetsInCluster"
-    effect = "Allow"
-    actions = [
-      "ec2:DescribeNetworkInterfaces",
-      "elasticloadbalancing:DeregisterTargets",
-      "elasticloadbalancing:DescribeTargetGroups",
-      "elasticloadbalancing:DescribeTargetHealth",
-      "elasticloadbalancing:RegisterTargets"
-    ]
-    resources = ["*"]
-  }
-
-  statement {
-    sid     = "ScopedPassRoleToTasks"
-    effect  = "Allow"
-    actions = ["iam:PassRole"]
-    resources = [
-      aws_iam_role.ecs_task_execution.arn,
-      aws_iam_role.ecs_task.arn
-    ]
-    condition {
-      test     = "StringEquals"
-      variable = "iam:PassedToService"
-      values   = ["ecs-tasks.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role_policy" "ecs_service" {
-  name   = "${local.name_prefix}-ecs-service"
-  role   = aws_iam_role.ecs_service_linked.id
-  policy = data.aws_iam_policy_document.ecs_service.json
 }
 
 resource "aws_iam_role_policy" "ecs_events_run_task" {

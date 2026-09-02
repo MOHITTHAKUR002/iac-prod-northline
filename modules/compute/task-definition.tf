@@ -67,5 +67,3 @@ resource "aws_ecs_task_definition" "api" {
     Name = "${local.name_prefix}-api-task"
   }
 }
-
-data "aws_region" "current" {}

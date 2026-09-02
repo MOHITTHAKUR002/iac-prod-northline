@@ -32,3 +32,13 @@ variable "db_allocated_storage" {
   description = "RDS allocated storage in GiB."
   type        = number
 }
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on RDS destroy (sandbox default)."
+  type        = bool
+}
+
+variable "deletion_protection" {
+  description = "RDS deletion protection flag."
+  type        = bool
+}

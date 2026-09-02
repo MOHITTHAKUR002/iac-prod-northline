@@ -86,6 +86,11 @@ describe('harness: security invariants', () => {
     assert.match(iam, /"ecs:cluster"\s*=\s*aws_ecs_cluster\.main\.arn/);
     assert.doesNotMatch(iam, /"\*"\s*\}\s*\}\s*\]\s*\}\)\s*$/m);
   });
+  it('exec role secrets policy is separate from managed policy', () => {
+    const iam = read('modules/compute/iam.tf');
+    assert.match(iam, /ecs_task_execution_secrets/);
+    assert.match(iam, /AmazonECSTaskExecutionRolePolicy/);
+  });
 });
 
 describe('harness: cost and HA choices', () => {
@@ -110,6 +115,49 @@ describe('harness: cost and HA choices', () => {
   it('omits empty container command override', () => {
     const taskDef = read('modules/compute/task-definition.tf');
     assert.doesNotMatch(taskDef, /command\s*=\s*\[\s*\]/);
+  });
+});
+
+describe('harness: ALB and TLS', () => {
+  it('ALB terminates HTTPS and redirects HTTP to HTTPS', () => {
+    const alb = read('modules/compute/alb.tf');
+    const albSg = read('modules/networking/security-groups.tf');
+    assert.match(alb, /protocol\s*=\s*"HTTPS"/);
+    assert.match(alb, /certificate_arn\s*=\s*var\.acm_certificate_arn/);
+    assert.match(alb, /status_code\s*=\s*"HTTP_301"/);
+    assert.match(albSg, /from_port\s*=\s*443/);
+  });
+
+  it('requires acm_certificate_arn at root without default', () => {
+    const rootVars = read('variables.tf');
+    const acmBlock = rootVars.match(/variable\s+"acm_certificate_arn"\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    assert.ok(acmBlock.length > 0, 'acm_certificate_arn variable missing');
+    assert.doesNotMatch(acmBlock, /default\s*=/);
+  });
+});
+
+describe('harness: input validation', () => {
+  it('validates vpc_cidr and availability_zones count', () => {
+    const rootVars = read('variables.tf');
+    assert.match(rootVars, /cidrhost\(var\.vpc_cidr/);
+    assert.match(rootVars, /length\(var\.availability_zones\)\s*>=\s*2/);
+  });
+
+  it('validates db_instance_class pattern', () => {
+    const dbClassBlock = read('variables.tf').match(/variable\s+"db_instance_class"[\s\S]*?\n\}/)?.[0] ?? '';
+    assert.match(dbClassBlock, /validation/);
+    assert.match(dbClassBlock, /var\.db_instance_class/);
+  });
+});
+
+describe('harness: RUNBOOK operational disclosure', () => {
+  it('documents RTO/RPO and restore procedure', () => {
+    const runbook = read('RUNBOOK.md');
+    assert.match(runbook, /20.?40 minutes/i);
+    assert.match(runbook, /5 minutes/i);
+    assert.match(runbook, /Restore procedure/i);
+    assert.match(runbook, /Fargate Spot/i);
+    assert.match(runbook, /https:\/\//i);
   });
 });
 

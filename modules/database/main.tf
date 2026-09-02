@@ -29,8 +29,11 @@ resource "aws_db_instance" "main" {
 
   publicly_accessible = false
   multi_az            = false
-  skip_final_snapshot = true
-  deletion_protection = false
+
+  # Sandbox/teardown-friendly defaults — set skip_final_snapshot=false and
+  # deletion_protection=true in real prod via tfvars override.
+  skip_final_snapshot = var.skip_final_snapshot
+  deletion_protection = var.deletion_protection
 
   backup_retention_period = 7
   storage_encrypted       = true

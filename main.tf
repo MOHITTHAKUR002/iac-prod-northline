@@ -17,6 +17,8 @@ module "database" {
   ecs_tasks_security_group_id = module.networking.ecs_tasks_security_group_id
   db_instance_class           = var.db_instance_class
   db_allocated_storage        = var.db_allocated_storage
+  skip_final_snapshot         = var.skip_final_snapshot
+  deletion_protection         = var.deletion_protection
 }
 
 module "compute" {
@@ -31,6 +33,7 @@ module "compute" {
   ecs_tasks_security_group_id = module.networking.ecs_tasks_security_group_id
   ecs_desired_count           = var.ecs_desired_count
   container_image_tag         = var.container_image_tag
+  acm_certificate_arn         = var.acm_certificate_arn
   db_endpoint                 = module.database.db_endpoint
   db_port                     = module.database.db_port
   db_name                     = module.database.db_name

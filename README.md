@@ -27,12 +27,24 @@ Root `main.tf` is **composition-only** — no `resource` blocks at root.
 | Data transfer / misc | conservative buffer | ~$10 |
 | **Total** | | **~$132** |
 
-### Cost trade-offs documented
+### Cost trade-offs and operational consequences
 
-- **Single NAT gateway** instead of per-AZ NAT saves ~$32/mo but creates cross-AZ egress for tasks in the non-NAT AZ (see `failure_domains` output).
-- **Fargate Spot** for compute savings; tasks may be interrupted (acceptable for this sandbox API).
-- **Single-AZ RDS** (`multi_az = false`) — upgrade for true DB HA if budget allows.
-- **Interface VPC endpoints** add ~$28/mo but avoid NAT charges for ECR pulls and Secrets Manager access from private subnets.
+| Trade-off | Savings | If it fails |
+|-----------|---------|-------------|
+| Single-AZ RDS | ~$14/mo vs Multi-AZ | **RPO ~5 min**, **RTO 20–40 min** (restore from snapshot + ECS redeploy) |
+| Single NAT | ~$32/mo vs 2× NAT | Cross-AZ egress dependency; endpoints cover AWS APIs |
+| Fargate Spot | ~$6–10/mo vs on-demand | **1–3 min** at 50% capacity during Spot reclaim |
+| VPC interface endpoints | −$28/mo vs NAT-only | Keeps ECR/Secrets reachable if NAT AZ fails |
+
+Full restore procedure and smoke-test steps: [RUNBOOK.md](./RUNBOOK.md).
+
+## Before Caliber submission
+
+1. `gh auth login && gh repo create iac-prod --public --source=. --push`
+2. `./scripts/capture-plan.sh` (requires AWS creds) → `evidence/plan.txt`
+3. `npm test && ./scripts/verify.sh`
+4. `node scripts/build-submit.mjs` → review `SUBMIT_PREVIEW.json`
+5. **Ask agent to submit** only after you verify preview
 
 ## Quick start
 
@@ -55,6 +67,7 @@ npm test
 - `project_prefix = "northline"`
 - `ecs_desired_count >= 2` (validated)
 - ECS tasks: user `1000:1000`, `readonlyRootFilesystem`, health check via `api/healthcheck.sh`
+- ALB: HTTPS (TLS 1.3) with `acm_certificate_arn`; HTTP redirects to HTTPS
 - RDS: `manage_master_user_password = true`, no hardcoded credentials
 
 ## Repository layout

@@ -48,6 +48,16 @@ variable "container_image_tag" {
   type        = string
 }
 
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for the HTTPS listener."
+  type        = string
+
+  validation {
+    condition     = can(regex("^arn:aws:acm:", var.acm_certificate_arn))
+    error_message = "acm_certificate_arn must be a valid ACM certificate ARN."
+  }
+}
+
 variable "db_endpoint" {
   description = "RDS endpoint hostname."
   type        = string

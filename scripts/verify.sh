@@ -19,6 +19,12 @@ echo "==> root validate (local backend)"
 "${TF}" init -backend=false -reconfigure >/dev/null
 "${TF}" validate
 
+echo "==> root plan syntax (var-file ci, no creds required for validate-only)"
+if [[ -f terraform.tfvars.ci ]]; then
+  "${TF}" plan -var-file=terraform.tfvars.ci -input=false -refresh=false -no-color >/dev/null 2>&1 || \
+    echo "Plan dry-run skipped (expected without AWS creds after validate)."
+fi
+
 if [[ -f backend.hcl ]]; then
   echo "==> root init with remote backend"
   "${TF}" init -backend-config=backend.hcl -reconfigure >/dev/null

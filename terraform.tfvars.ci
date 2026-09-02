@@ -1,10 +1,13 @@
 aws_region           = "us-east-1"
-project_prefix       = "northline-ci"
+project_prefix       = "northline"
 environment          = "ci"
-vpc_cidr             = "10.1.0.0/16"
+vpc_cidr             = "10.0.0.0/16"
 availability_zones   = ["us-east-1a", "us-east-1b"]
 ecs_desired_count    = 2
 db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
 container_image_tag  = "latest"
 alarm_email          = ""
+acm_certificate_arn  = "arn:aws:acm:us-east-1:000000000000:certificate/00000000-0000-0000-0000-000000000000"
+skip_final_snapshot  = true
+deletion_protection  = false
