@@ -1,15 +1,19 @@
 module "networking" {
-  source = "./modules/networking"
-
+  source             = "./modules/networking"
   project_prefix     = var.project_prefix
   environment        = var.environment
   vpc_cidr           = var.vpc_cidr
   availability_zones = var.availability_zones
 }
 
-module "database" {
-  source = "./modules/database"
+module "storage" {
+  source         = "./modules/storage"
+  project_prefix = var.project_prefix
+  environment    = var.environment
+}
 
+module "database" {
+  source                      = "./modules/database"
   project_prefix              = var.project_prefix
   environment                 = var.environment
   vpc_id                      = module.networking.vpc_id
@@ -21,32 +25,38 @@ module "database" {
   deletion_protection         = var.deletion_protection
 }
 
-module "compute" {
-  source = "./modules/compute"
+module "load_balancing" {
+  source                = "./modules/load_balancing"
+  project_prefix        = var.project_prefix
+  environment           = var.environment
+  vpc_id                = module.networking.vpc_id
+  public_subnet_ids     = module.networking.public_subnet_ids
+  alb_security_group_id = module.networking.alb_security_group_id
+  acm_certificate_arn   = var.acm_certificate_arn
+}
 
+module "compute" {
+  source                      = "./modules/compute"
   project_prefix              = var.project_prefix
   environment                 = var.environment
-  vpc_id                      = module.networking.vpc_id
-  public_subnet_ids           = module.networking.public_subnet_ids
   private_subnet_ids          = module.networking.private_subnet_ids
-  alb_security_group_id       = module.networking.alb_security_group_id
   ecs_tasks_security_group_id = module.networking.ecs_tasks_security_group_id
   ecs_desired_count           = var.ecs_desired_count
   container_image_tag         = var.container_image_tag
-  acm_certificate_arn         = var.acm_certificate_arn
   db_endpoint                 = module.database.db_endpoint
   db_port                     = module.database.db_port
   db_name                     = module.database.db_name
+  assets_bucket_arn           = module.storage.assets_bucket_arn
+  target_group_arn            = module.load_balancing.target_group_arn
 }
 
 module "observability" {
-  source = "./modules/observability"
-
+  source                  = "./modules/observability"
   project_prefix          = var.project_prefix
   environment             = var.environment
   alarm_email             = var.alarm_email
-  alb_arn_suffix          = module.compute.alb_arn_suffix
-  target_group_arn_suffix = module.compute.target_group_arn_suffix
+  alb_arn_suffix          = module.load_balancing.alb_arn_suffix
+  target_group_arn_suffix = module.load_balancing.target_group_arn_suffix
   ecs_cluster_name        = module.compute.ecs_cluster_name
   ecs_service_name        = module.compute.ecs_service_name
   db_instance_id          = module.database.db_instance_id

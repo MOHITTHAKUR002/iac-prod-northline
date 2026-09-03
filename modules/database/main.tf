@@ -3,6 +3,13 @@ locals {
   db_name     = replace("${var.project_prefix}${var.environment}", "-", "")
 }
 
+check "db_name_is_valid_postgres_identifier" {
+  assert {
+    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_]{0,62}$", local.db_name))
+    error_message = "Derived db_name must be a valid Postgres identifier (letter start, ≤63 chars, alphanumeric/underscore)."
+  }
+}
+
 resource "aws_db_subnet_group" "main" {
   name       = "${local.name_prefix}-db-subnet"
   subnet_ids = var.private_subnet_ids

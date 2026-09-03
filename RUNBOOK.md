@@ -2,6 +2,8 @@
 
 Clone → bootstrap → configure → init → plan → apply → smoke → destroy.
 
+**Repo:** https://github.com/MOHITTHAKUR002/iac-prod-northline
+
 ## Prerequisites
 
 AWS CLI + credentials, Node.js ≥ 18, Docker, ACM cert in deployment region, `bin/terraform` (v1.9.8).
@@ -9,7 +11,7 @@ AWS CLI + credentials, Node.js ≥ 18, Docker, ACM cert in deployment region, `b
 ## 1. Clone & test
 
 ```bash
-git clone <github-repo-url> iac-prod && cd iac-prod
+git clone https://github.com/MOHITTHAKUR002/iac-prod-northline iac-prod && cd iac-prod
 npm test
 ```
 
@@ -36,7 +38,7 @@ cp terraform.tfvars.example terraform.tfvars   # set acm_certificate_arn
 
 ```bash
 ECR=$(./bin/terraform output -raw ecr_repository_url)
-# build, tag, push to ECR — see README §Quick start
+# build, tag, push to ECR — see README
 ALB=$(./bin/terraform output -raw alb_dns_name)
 curl -sf "https://${ALB}/health"
 curl -sI "http://${ALB}/health" | grep -i location   # 301 → https
@@ -58,9 +60,9 @@ Budget **~$132/mo** (README table). Chosen trade-offs:
 
 | Choice | Consequence |
 |--------|-------------|
-| **Single-AZ RDS** | **RPO ~5 minutes** data loss on AZ failure. **RTO 20–40 minutes**: alarm → restore from 7-day snapshot → ECS redeploy. |
+| **Single-AZ RDS** | **RPO ~5 minutes** data loss on AZ failure. **RTO 20–40 minutes**: alarm → restore from 7-day snapshot → ECS redeploy. *Estimate — not restore-drill verified.* |
 | **Single NAT** | NAT-AZ loss blocks general internet egress from other AZ; ECR/Secrets/Logs still via VPC endpoints. |
-| **Fargate Spot (1 on-demand base)** | One task always on FARGATE; remainder on Spot. Worst case: both Spot tasks reclaimed together in an AZ crunch — **0% API capacity 1–3 min** until ECS replaces tasks. |
+| **Fargate Spot + on-demand base=1** | ≥1 task always on **FARGATE** (not Spot-only). Remaining tasks may use Spot. Spot reclaim → temporary capacity drop until ECS replaces Spot tasks (**~1–3 min** at reduced capacity). |
 
 ### Restore procedure (RDS AZ failure)
 

@@ -6,6 +6,21 @@ data "aws_iam_policy_document" "ecs_task_execution_assume" {
       type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
     }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values = [
+        "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster/${local.name_prefix}-cluster",
+        "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:task-definition/${local.name_prefix}-api:*"
+      ]
+    }
   }
 }
 
@@ -37,7 +52,7 @@ data "aws_iam_policy_document" "ecs_task_execution_secrets" {
       "secretsmanager:GetSecretValue",
       "secretsmanager:DescribeSecret"
     ]
-    resources = ["arn:aws:secretsmanager:*:*:secret:${local.name_prefix}/*"]
+    resources = ["arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*"]
   }
 }
 
@@ -48,6 +63,12 @@ data "aws_iam_policy_document" "ecs_task_assume" {
     principals {
       type        = "Service"
       identifiers = ["ecs-tasks.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
     }
   }
 }
@@ -70,8 +91,8 @@ data "aws_iam_policy_document" "ecs_task" {
       "s3:ListBucket"
     ]
     resources = [
-      aws_s3_bucket.assets.arn,
-      "${aws_s3_bucket.assets.arn}/*"
+      var.assets_bucket_arn,
+      "${var.assets_bucket_arn}/*"
     ]
   }
 

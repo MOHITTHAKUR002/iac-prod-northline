@@ -31,10 +31,12 @@ const rootMain = read('main.tf');
 const rootVersions = read('versions.tf');
 
 describe('harness: module layout', () => {
-  it('includes networking, compute, database modules at root', () => {
+  it('includes required modules at root', () => {
     assert.match(rootMain, /module\s+"networking"/);
     assert.match(rootMain, /module\s+"compute"/);
     assert.match(rootMain, /module\s+"database"/);
+    assert.match(rootMain, /module\s+"storage"/);
+    assert.match(rootMain, /module\s+"load_balancing"/);
   });
 
   it('root main.tf is composition-only (no resource blocks)', () => {
@@ -43,6 +45,20 @@ describe('harness: module layout', () => {
 
   it('uses partial S3 backend configuration', () => {
     assert.match(rootVersions, /backend\s+"s3"\s*\{\s*\}/);
+  });
+
+  it('compute module does not own ALB or S3 assets', () => {
+    const computeFiles = tfFiles
+      .map((f) => relative(ROOT, f))
+      .filter((p) => p.startsWith('modules/compute/'));
+    assert.ok(!computeFiles.some((p) => p.endsWith('/alb.tf')));
+    assert.ok(!computeFiles.some((p) => p.endsWith('/s3.tf')));
+    assert.doesNotMatch(read('modules/compute/ecs.tf') + read('modules/compute/iam.tf'), /aws_s3_bucket/);
+    assert.doesNotMatch(read('modules/compute/ecs.tf'), /aws_lb\b/);
+  });
+
+  it('has no unused aws_subnet data lookups in compute', () => {
+    assert.doesNotMatch(read('modules/compute/data.tf'), /data\s+"aws_subnet"/);
   });
 });
 
@@ -81,15 +97,24 @@ describe('harness: security invariants', () => {
     assert.doesNotMatch(allTf, /AKIA[0-9A-Z]{16}/);
   });
 
-  it('execution role has no ecs:RunTask permission', () => {
+  it('execution role has no ecs RunTask permission', () => {
     const iam = read('modules/compute/iam.tf');
-    assert.doesNotMatch(iam, /ecs:RunTask/);
+    // Match IAM action literals only — ignore prose comments.
+    assert.doesNotMatch(iam, /["']ecs:RunTask["']/);
+    assert.doesNotMatch(iam, /actions\s*=\s*\[[^\]]*ecs:RunTask/s);
     assert.doesNotMatch(iam, /ecs_events_run_task/);
   });
+
   it('exec role secrets policy is separate from managed policy', () => {
     const iam = read('modules/compute/iam.tf');
     assert.match(iam, /ecs_task_execution_secrets/);
     assert.match(iam, /AmazonECSTaskExecutionRolePolicy/);
+  });
+
+  it('execution assume role is scoped to this cluster ARN', () => {
+    const iam = read('modules/compute/iam.tf');
+    assert.match(iam, /aws:SourceArn/);
+    assert.match(iam, /cluster\/\$\{local\.name_prefix\}-cluster/);
   });
 });
 
@@ -100,17 +125,24 @@ describe('harness: cost and HA choices', () => {
     assert.equal(natBlocks.length, 1);
   });
 
-  it('uses Fargate Spot with on-demand base for HA', () => {
+  it('uses Fargate Spot with on-demand base (not Spot-only)', () => {
     const ecs = read('modules/compute/ecs.tf');
     assert.match(ecs, /FARGATE_SPOT/);
     assert.match(ecs, /capacity_provider\s*=\s*"FARGATE"/);
     assert.match(ecs, /base\s*=\s*1/);
+    // Cluster default must not be 100% Spot with base 0 only
+    const defaultSpotOnly =
+      /default_capacity_provider_strategy\s*\{[^}]*FARGATE_SPOT[^}]*weight\s*=\s*100[^}]*base\s*=\s*0/s.test(
+        ecs
+      ) && !/default_capacity_provider_strategy\s*\{[^}]*capacity_provider\s*=\s*"FARGATE"/s.test(ecs);
+    assert.equal(defaultSpotOnly, false, 'cluster default must include on-demand FARGATE base');
   });
 
-  it('alb.tf has no orphaned subnet data source', () => {
-    const alb = read('modules/compute/alb.tf');
-    assert.doesNotMatch(alb, /data\s+"aws_subnet"/);
-    assert.doesNotMatch(alb, /aws_ecs_service/);
+  it('ALB lives in load_balancing module', () => {
+    const alb = read('modules/load_balancing/main.tf');
+    assert.match(alb, /protocol\s*=\s*"HTTPS"/);
+    assert.match(alb, /certificate_arn\s*=\s*var\.acm_certificate_arn/);
+    assert.match(alb, /status_code\s*=\s*"HTTP_301"/);
   });
 
   it('validates ecs_desired_count >= 2', () => {
@@ -128,7 +160,7 @@ describe('harness: cost and HA choices', () => {
 
 describe('harness: ALB and TLS', () => {
   it('ALB terminates HTTPS and redirects HTTP to HTTPS', () => {
-    const alb = read('modules/compute/alb.tf');
+    const alb = read('modules/load_balancing/main.tf');
     const albSg = read('modules/networking/security-groups.tf');
     assert.match(alb, /protocol\s*=\s*"HTTPS"/);
     assert.match(alb, /certificate_arn\s*=\s*var\.acm_certificate_arn/);
@@ -180,10 +212,18 @@ describe('harness: supporting files', () => {
     const outputs = read('outputs.tf');
     assert.match(outputs, /failure_domains/);
     assert.match(outputs, /nat_gateway_az/);
+    assert.match(outputs, /module\.networking\.private_subnet_azs/);
   });
 
   it('includes required documentation and evidence files', () => {
-    for (const file of ['README.md', 'RUNBOOK.md', 'ADR.md', 'evidence/VERIFY.md']) {
+    for (const file of [
+      'README.md',
+      'RUNBOOK.md',
+      'ADR.md',
+      'evidence/VERIFY.md',
+      'api/Dockerfile',
+      'api/healthcheck.sh',
+    ]) {
       assert.ok(statSync(join(ROOT, file)).isFile(), `missing ${file}`);
     }
   });
@@ -194,6 +234,8 @@ describe('harness: supporting files', () => {
     assert.ok(rel.some((p) => p.startsWith('modules/networking/')));
     assert.ok(rel.some((p) => p.startsWith('modules/compute/')));
     assert.ok(rel.some((p) => p.startsWith('modules/database/')));
+    assert.ok(rel.some((p) => p.startsWith('modules/storage/')));
+    assert.ok(rel.some((p) => p.startsWith('modules/load_balancing/')));
     assert.ok(rel.some((p) => p.startsWith('bootstrap/')));
   });
 });

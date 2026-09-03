@@ -10,4 +10,4 @@ cd bootstrap && ../bin/terraform init && ../bin/terraform apply -var="project_pr
 ./bin/terraform destroy -var-file=terraform.tfvars
 ```
 
-Cost ~$132/mo: single-AZ RDS (RPO ~5m, RTO 20-40m), single NAT, Fargate Spot + 1 on-demand base (worst case 0% cap 1-3m if both Spot reclaimed).
+Cost ~$132/mo: single-AZ RDS (RPO ~5m, RTO 20-40m estimate), single NAT, Fargate on-demand base=1 + Spot weight (not Spot-only). Modules: networking, storage, database, load_balancing, compute, observability.

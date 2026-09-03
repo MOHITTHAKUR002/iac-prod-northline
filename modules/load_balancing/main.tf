@@ -1,3 +1,8 @@
+locals {
+  name_prefix    = "${var.project_prefix}-${var.environment}"
+  container_port = var.container_port
+}
+
 resource "aws_lb" "main" {
   name               = "${local.name_prefix}-alb"
   internal           = false

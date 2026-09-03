@@ -1,4 +1,9 @@
 .terraform/
+.terraform-moto/
+.venv-moto/
+providers_override.tf
+bootstrap/providers_override.tf
+versions.tf.planbak
 *.tfstate
 *.tfstate.*
 backend.hcl
@@ -9,6 +14,6 @@ backend.hcl
 node_modules/
 .DS_Store
 *.log
-evidence/*.txt
 evidence/*.json
+evidence/terraform.tfstate*
 .github-repo-url

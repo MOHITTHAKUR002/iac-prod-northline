@@ -1,0 +1,28 @@
+# Generated for local AWS-compatible sandbox (moto/LocalStack).
+# Not used in real AWS deploys — gitignored / only for evidence/plan capture.
+provider "aws" {
+  access_key                  = "test"
+  secret_key                  = "test"
+  region                      = "us-east-1"
+  s3_use_path_style           = true
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = false
+
+  endpoints {
+    acm            = "http://127.0.0.1:5000"
+    cloudwatch     = "http://127.0.0.1:5000"
+    dynamodb       = "http://127.0.0.1:5000"
+    ec2            = "http://127.0.0.1:5000"
+    ecr            = "http://127.0.0.1:5000"
+    ecs            = "http://127.0.0.1:5000"
+    elasticloadbalancingv2 = "http://127.0.0.1:5000"
+    iam            = "http://127.0.0.1:5000"
+    logs           = "http://127.0.0.1:5000"
+    rds            = "http://127.0.0.1:5000"
+    s3             = "http://127.0.0.1:5000"
+    secretsmanager = "http://127.0.0.1:5000"
+    sns            = "http://127.0.0.1:5000"
+    sts            = "http://127.0.0.1:5000"
+  }
+}

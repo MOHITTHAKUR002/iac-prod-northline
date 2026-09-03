@@ -1,3 +1,9 @@
+locals {
+  name_prefix = "${var.project_prefix}-${var.environment}"
+}
+
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "assets" {
   bucket = "${local.name_prefix}-assets-${data.aws_caller_identity.current.account_id}"
 
@@ -25,4 +31,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
   }
 }
 
-data "aws_caller_identity" "current" {}
+resource "aws_s3_bucket_versioning" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}

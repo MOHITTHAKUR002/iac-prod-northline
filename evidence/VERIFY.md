@@ -1,28 +1,29 @@
 # Verification Evidence
 
-## Local (no AWS credentials)
-
-These pass in CI/local without AWS access:
+## Local (no personal AWS account)
 
 ```bash
 npm test
 ./bin/terraform fmt -check -recursive
-(cd bootstrap && ../bin/terraform init -backend=false && ../bin/terraform validate)
-./bin/terraform init -backend=false -reconfigure && ./bin/terraform validate
+./scripts/capture-plan.sh   # uses moto sandbox when AWS creds are absent
 ```
 
-## Live plan (AWS credentials required)
+`capture-plan.sh` starts a local **moto** AWS-compatible API on `:5000`, points the provider at it via `providers_override.tf.local`, and runs a real `terraform init` + `plan`. Output lands in `evidence/plan.txt` with a `Plan: N to add` line.
 
-To produce real `terraform plan` output for Caliber submission:
+## What was verified on this machine
 
-1. Configure AWS credentials (`aws sts get-caller-identity` succeeds)
-2. Run bootstrap apply (see RUNBOOK.md)
-3. `./scripts/write-backend-config.sh <bucket> <table>`
-4. `./bin/terraform init -backend-config=backend.hcl`
-5. `./bin/terraform plan -var-file=terraform.tfvars`
+| Step | Status |
+|------|--------|
+| `terraform validate` (bootstrap + root) | Success |
+| `npm test` | 33/33 pass |
+| `terraform plan` against moto sandbox | **Plan: 53 to add** → `evidence/plan.txt` |
+| Live AWS `apply` / `destroy` | Not run (no personal AWS account) |
 
-Paste the plan output into submission notes. If `apply` is blocked by org policy, note that honestly — a verified plan in a sandbox account is acceptable.
+## Live AWS (optional)
 
-## Apply / destroy
+If you later have credentials:
 
-Full lifecycle verification requires the same credentials plus permission to create VPC, RDS, ECS, ALB, and supporting IAM resources. Estimated monthly cost ~$132 (see README cost table).
+1. `aws sts get-caller-identity`
+2. Bootstrap + `./scripts/write-backend-config.sh`
+3. `./scripts/capture-plan.sh` (auto-uses live AWS when STS works)
+4. `terraform apply` / `destroy` per RUNBOOK.md

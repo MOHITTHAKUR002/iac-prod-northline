@@ -12,13 +12,18 @@ resource "aws_ecs_cluster" "main" {
 }
 
 resource "aws_ecs_cluster_capacity_providers" "main" {
-  cluster_name = aws_ecs_cluster.main.name
-
+  cluster_name       = aws_ecs_cluster.main.name
   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
   default_capacity_provider_strategy {
+    capacity_provider = "FARGATE"
+    weight            = 1
+    base              = 1
+  }
+
+  default_capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
-    weight            = 100
+    weight            = 3
     base              = 0
   }
 }
@@ -31,13 +36,13 @@ resource "aws_ecs_service" "api" {
 
   capacity_provider_strategy {
     capacity_provider = "FARGATE"
-    weight            = 0
+    weight            = 1
     base              = 1
   }
 
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
-    weight            = 100
+    weight            = 3
     base              = 0
   }
 
@@ -48,15 +53,13 @@ resource "aws_ecs_service" "api" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.api.arn
+    target_group_arn = var.target_group_arn
     container_name   = "api"
     container_port   = local.container_port
   }
 
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
-
-  depends_on = [aws_lb_listener.https]
 
   tags = {
     Name = "${local.name_prefix}-api-service"

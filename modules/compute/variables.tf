@@ -8,24 +8,9 @@ variable "environment" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "VPC identifier."
-  type        = string
-}
-
-variable "public_subnet_ids" {
-  description = "Public subnet identifiers for ALB."
-  type        = list(string)
-}
-
 variable "private_subnet_ids" {
   description = "Private subnet identifiers for ECS tasks."
   type        = list(string)
-}
-
-variable "alb_security_group_id" {
-  description = "ALB security group identifier."
-  type        = string
 }
 
 variable "ecs_tasks_security_group_id" {
@@ -48,16 +33,6 @@ variable "container_image_tag" {
   type        = string
 }
 
-variable "acm_certificate_arn" {
-  description = "ACM certificate ARN for the HTTPS listener."
-  type        = string
-
-  validation {
-    condition     = can(regex("^arn:aws:acm:", var.acm_certificate_arn))
-    error_message = "acm_certificate_arn must be a valid ACM certificate ARN."
-  }
-}
-
 variable "db_endpoint" {
   description = "RDS endpoint hostname."
   type        = string
@@ -70,5 +45,15 @@ variable "db_port" {
 
 variable "db_name" {
   description = "Database name."
+  type        = string
+}
+
+variable "assets_bucket_arn" {
+  description = "ARN of the static assets S3 bucket (storage module)."
+  type        = string
+}
+
+variable "target_group_arn" {
+  description = "ALB target group ARN (load_balancing module)."
   type        = string
 }
