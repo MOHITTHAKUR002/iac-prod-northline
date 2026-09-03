@@ -6,17 +6,23 @@ resource "aws_ecs_task_definition" "api" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
+
   container_definitions = jsonencode([{
     name         = "api"
     image        = "${aws_ecr_repository.api.repository_url}:${var.container_image_tag}"
     essential    = true
-    portMappings = [{ containerPort = local.container_port, hostPort = local.container_port, protocol = "tcp" }]
+    portMappings = [{ containerPort = var.container_port, hostPort = var.container_port, protocol = "tcp" }]
     environment = [
-      { name = "PORT", value = tostring(local.container_port) },
+      { name = "PORT", value = tostring(var.container_port) },
       { name = "DB_HOST", value = var.db_endpoint },
       { name = "DB_PORT", value = tostring(var.db_port) },
       { name = "DB_NAME", value = var.db_name },
       { name = "NODE_ENV", value = "production" },
+    ]
+    # RDS manage_master_user_password secret — injected by ECS exec role at start
+    secrets = [
+      { name = "DB_USER", valueFrom = "${var.master_user_secret_arn}:username::" },
+      { name = "DB_PASSWORD", valueFrom = "${var.master_user_secret_arn}:password::" },
     ]
     mountPoints = [{ sourceVolume = "tmp", containerPath = "/tmp", readOnly = false }]
     logConfiguration = {
@@ -37,6 +43,10 @@ resource "aws_ecs_task_definition" "api" {
     readonlyRootFilesystem = true
     user                   = "1000:1000"
   }])
-  volume { name = "tmp" }
+
+  volume {
+    name = "tmp"
+  }
+
   tags = { Name = "${local.name_prefix}-api-task" }
 }

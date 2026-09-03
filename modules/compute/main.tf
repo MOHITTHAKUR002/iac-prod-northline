@@ -1,8 +1,7 @@
 locals {
-  name_prefix    = "${var.project_prefix}-${var.environment}"
-  container_port = var.container_port
+  name_prefix = "${var.project_prefix}-${var.environment}"
   cps = [
-    { capacity_provider = "FARGATE", weight = 1, base = 1 },
-    { capacity_provider = "FARGATE_SPOT", weight = 3, base = 0 },
+    { capacity_provider = "FARGATE", weight = var.fargate_weight, base = var.fargate_base },
+    { capacity_provider = "FARGATE_SPOT", weight = var.fargate_spot_weight, base = 0 },
   ]
 }

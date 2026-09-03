@@ -67,8 +67,8 @@ describe('harness: module layout', () => {
     assert.match(read('main.tf'), /container_port\s*=\s*var\.container_port/);
     assert.match(read('modules/networking/security-groups.tf'), /from_port\s*=\s*var\.container_port/);
     assert.doesNotMatch(read('modules/networking/security-groups.tf'), /from_port\s*=\s*8080/);
-    assert.match(read('modules/compute/main.tf'), /container_port\s*=\s*var\.container_port/);
-    assert.match(read('modules/load_balancing/main.tf'), /port\s*=\s*local\.container_port/);
+    assert.match(read('modules/compute/task-definition.tf'), /containerPort\s*=\s*var\.container_port/);
+    assert.match(read('modules/load_balancing/main.tf'), /port\s*=\s*var\.container_port/);
   });
 
   it('defines ECS service autoscaling with a capped max capacity', () => {
@@ -76,6 +76,22 @@ describe('harness: module layout', () => {
     assert.match(ecs, /aws_appautoscaling_target/);
     assert.match(ecs, /ECSServiceAverageCPUUtilization/);
     assert.match(read('variables.tf'), /variable\s+"ecs_max_capacity"/);
+  });
+
+  it('exposes Fargate capacity provider weights as variables', () => {
+    assert.match(read('variables.tf'), /variable\s+"fargate_base"/);
+    assert.match(read('variables.tf'), /variable\s+"fargate_spot_weight"/);
+    assert.match(read('modules/compute/main.tf'), /var\.fargate_base/);
+    assert.match(read('modules/compute/main.tf'), /var\.fargate_spot_weight/);
+  });
+
+  it('injects RDS master credentials via Secrets Manager secrets block', () => {
+    const task = read('modules/compute/task-definition.tf');
+    assert.match(task, /secrets\s*=/);
+    assert.match(task, /DB_PASSWORD/);
+    assert.match(task, /master_user_secret_arn/);
+    assert.match(read('modules/compute/iam.tf'), /master_user_secret_arn/);
+    assert.match(read('main.tf'), /master_user_secret_arn\s*=\s*module\.database\.master_user_secret_arn/);
   });
 });
 
@@ -153,7 +169,8 @@ describe('harness: cost and HA choices', () => {
     const ecs = read('modules/compute/ecs.tf') + read('modules/compute/main.tf');
     assert.match(ecs, /FARGATE_SPOT/);
     assert.match(ecs, /"FARGATE"/);
-    assert.match(ecs, /base\s*=\s*1/);
+    assert.match(ecs, /var\.fargate_base/);
+    assert.match(read('variables.tf'), /fargate_base[\s\S]*?default\s*=\s*1/);
     assert.match(ecs, /resource\s+"aws_ecs_service"\s+"api"/);
   });
 
@@ -210,13 +227,34 @@ describe('harness: input validation', () => {
 });
 
 describe('harness: RUNBOOK operational disclosure', () => {
-  it('documents RTO/RPO and restore procedure', () => {
+  it('documents quantified RTO/RPO and restore procedure', () => {
     const runbook = read('RUNBOOK.md');
-    assert.match(runbook, /20.?40 minutes/i);
-    assert.match(runbook, /5 minutes/i);
+    assert.match(runbook, /25.?40 minutes/i);
+    assert.match(runbook, /RPO\s*≈\s*5 minutes|RPO ≈ 5 minutes|RPO ~5|≈ 5 minutes/i);
     assert.match(runbook, /Restore procedure/i);
-    assert.match(runbook, /Fargate Spot/i);
+    assert.match(runbook, /Single NAT/i);
     assert.match(runbook, /https:\/\//i);
+    assert.match(runbook, /skip_final_snapshot\s*=\s*false/i);
+    assert.match(runbook, /deletion_protection\s*=\s*true/i);
+  });
+
+  it('keeps descriptive validation error messages (not placeholders)', () => {
+    const rootVars = read('variables.tf');
+    assert.doesNotMatch(rootVars, /error_message\s*=\s*"x"/);
+    assert.match(rootVars, /ecs_desired_count must be at least 2/);
+    assert.match(rootVars, /container_port must be a non-privileged/);
+  });
+
+  it('defaults skip_final_snapshot false and deletion_protection true', () => {
+    const rootVars = read('variables.tf');
+    const skip = rootVars.match(/variable\s+"skip_final_snapshot"\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    const del = rootVars.match(/variable\s+"deletion_protection"\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    assert.match(skip, /default\s*=\s*false/);
+    assert.match(del, /default\s*=\s*true/);
+  });
+
+  it('declares partial S3 backend in versions.tf', () => {
+    assert.match(read('versions.tf'), /backend\s+"s3"\s*\{\s*\}/);
   });
 });
 

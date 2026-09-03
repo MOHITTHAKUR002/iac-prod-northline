@@ -1,9 +1,14 @@
-module.networking.data.aws_region.current: Reading...
-module.storage.data.aws_caller_identity.current: Reading...
-module.compute.data.aws_region.current: Reading...
+# Terraform plan — local AWS-compatible sandbox (moto)
+# Demonstrates init → plan against mock AWS APIs (account 123456789012).
+# Live AWS apply/destroy not run — no personal AWS account on this machine.
+# Date: 2026-09-03T06:24Z
+
 module.compute.data.aws_caller_identity.current: Reading...
-module.networking.data.aws_region.current: Read complete after 0s [id=us-east-1]
+module.compute.data.aws_region.current: Reading...
+module.storage.data.aws_caller_identity.current: Reading...
+module.networking.data.aws_region.current: Reading...
 module.compute.data.aws_region.current: Read complete after 0s [id=us-east-1]
+module.networking.data.aws_region.current: Read complete after 0s [id=us-east-1]
 module.compute.data.aws_caller_identity.current: Read complete after 0s [id=123456789012]
 module.storage.data.aws_caller_identity.current: Read complete after 0s [id=123456789012]
 
@@ -272,9 +277,13 @@ Terraform will perform the following actions:
       + name                  = "northline-ci-ecs-task"
       + name_prefix           = (known after apply)
       + path                  = "/"
+      + tags                  = {
+          + "Name" = "northline-ci-ecs-task"
+        }
       + tags_all              = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
+          + "Name"        = "northline-ci-ecs-task"
           + "Project"     = "northline"
         }
       + unique_id             = (known after apply)
@@ -318,9 +327,13 @@ Terraform will perform the following actions:
       + name                  = "northline-ci-ecs-exec"
       + name_prefix           = (known after apply)
       + path                  = "/"
+      + tags                  = {
+          + "Name" = "northline-ci-ecs-exec"
+        }
       + tags_all              = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
+          + "Name"        = "northline-ci-ecs-exec"
           + "Project"     = "northline"
         }
       + unique_id             = (known after apply)
@@ -342,22 +355,7 @@ Terraform will perform the following actions:
       + id          = (known after apply)
       + name        = "northline-ci-ecs-exec-secrets"
       + name_prefix = (known after apply)
-      + policy      = jsonencode(
-            {
-              + Statement = [
-                  + {
-                      + Action   = [
-                          + "secretsmanager:GetSecretValue",
-                          + "secretsmanager:DescribeSecret",
-                        ]
-                      + Effect   = "Allow"
-                      + Resource = "arn:aws:secretsmanager:us-east-1:123456789012:secret:northline-ci/*"
-                      + Sid      = "ReadAppSecrets"
-                    },
-                ]
-              + Version   = "2012-10-17"
-            }
-        )
+      + policy      = (known after apply)
       + role        = (known after apply)
     }
 

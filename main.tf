@@ -6,11 +6,13 @@ module "networking" {
   availability_zones = var.availability_zones
   container_port     = var.container_port
 }
+
 module "storage" {
   source         = "./modules/storage"
   project_prefix = var.project_prefix
   environment    = var.environment
 }
+
 module "database" {
   source                      = "./modules/database"
   project_prefix              = var.project_prefix
@@ -23,6 +25,7 @@ module "database" {
   skip_final_snapshot         = var.skip_final_snapshot
   deletion_protection         = var.deletion_protection
 }
+
 module "load_balancing" {
   source                = "./modules/load_balancing"
   project_prefix        = var.project_prefix
@@ -33,6 +36,7 @@ module "load_balancing" {
   acm_certificate_arn   = var.acm_certificate_arn
   container_port        = var.container_port
 }
+
 module "compute" {
   source                      = "./modules/compute"
   project_prefix              = var.project_prefix
@@ -41,14 +45,19 @@ module "compute" {
   ecs_tasks_security_group_id = module.networking.ecs_tasks_security_group_id
   ecs_desired_count           = var.ecs_desired_count
   ecs_max_capacity            = var.ecs_max_capacity
+  fargate_base                = var.fargate_base
+  fargate_weight              = var.fargate_weight
+  fargate_spot_weight         = var.fargate_spot_weight
   container_port              = var.container_port
   container_image_tag         = var.container_image_tag
   db_endpoint                 = module.database.db_endpoint
   db_port                     = module.database.db_port
   db_name                     = module.database.db_name
+  master_user_secret_arn      = module.database.master_user_secret_arn
   assets_bucket_arn           = module.storage.assets_bucket_arn
   target_group_arn            = module.load_balancing.target_group_arn
 }
+
 module "observability" {
   source                  = "./modules/observability"
   project_prefix          = var.project_prefix

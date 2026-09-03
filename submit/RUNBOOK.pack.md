@@ -1,14 +1,16 @@
 # RUNBOOK — Northline IaC
 
+## Operational consequence (single-AZ RDS)
+**RPO ≈ 5 minutes** of data loss on AZ failure. **RTO ≈ 25–40 minutes** of downtime until restore from the most recent automated snapshot (`backup_retention_period=7`), Secrets Manager password on the new instance, terraform/ECS `DB_HOST` rewire, and force-new-deployment. Helper: `./scripts/restore-rds.sh`. Defaults: `skip_final_snapshot=false`, `deletion_protection=true`.
+
+## Operational consequence (single NAT)
+NAT AZ failure blocks general internet egress from other private AZs (~15–30m to add a second NAT). ECR/Secrets/Logs stay on VPC endpoints. See `failure_domains.single_nat_risk`.
+
 ```bash
-git clone https://github.com/MOHITTHAKUR002/iac-prod-northline iac-prod && cd iac-prod
 npm test && ./scripts/verify.sh
-cd bootstrap && ../bin/terraform init && ../bin/terraform apply -var="project_prefix=northline" && cd ..
-./scripts/write-backend-config.sh "$(cd bootstrap && ../bin/terraform output -raw state_bucket_name)" "$(cd bootstrap && ../bin/terraform output -raw dynamodb_table_name)"
-./bin/terraform init -backend-config=backend.hcl
-./bin/terraform plan -var-file=terraform.tfvars | tee evidence/plan.txt && ./bin/terraform apply -var-file=terraform.tfvars
-./scripts/restore-rds.sh northline-prod-postgres   # RTO drill helper
-./bin/terraform destroy -var-file=terraform.tfvars
+# bootstrap → write-backend-config.sh → init -backend-config=backend.hcl
+# versions.tf contains: backend "s3" {}
+./bin/terraform plan -var-file=terraform.tfvars | tee evidence/plan.txt
 ```
 
-~$132/mo itemized (NAT~32 ALB~22 Fargate~20-28 RDS~15 endpoints~28). Single-AZ RDS RPO~5m; RTO estimate 20-40m (often longer — see restore script). Single NAT + VPC endpoints. Fargate base=1 on-demand + Spot weight=3; Spot reclaim ~1-3m reduced capacity; autoscaling max=4. `var.container_port` wires SG+TG+task.
+~$132/mo. `var.fargate_base`/`weight`/`spot_weight`. `var.container_port` → SG+TG+task. RDS via task secrets DB_USER/DB_PASSWORD.

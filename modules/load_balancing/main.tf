@@ -1,6 +1,5 @@
 locals {
-  name_prefix    = "${var.project_prefix}-${var.environment}"
-  container_port = var.container_port
+  name_prefix = "${var.project_prefix}-${var.environment}"
 }
 
 resource "aws_lb" "main" {
@@ -14,7 +13,7 @@ resource "aws_lb" "main" {
 
 resource "aws_lb_target_group" "api" {
   name        = "${local.name_prefix}-api-tg"
-  port        = local.container_port
+  port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"

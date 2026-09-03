@@ -5,6 +5,9 @@ vpc_cidr             = "10.0.0.0/16"
 availability_zones   = ["us-east-1a", "us-east-1b"]
 ecs_desired_count    = 2
 ecs_max_capacity     = 4
+fargate_base         = 1
+fargate_weight       = 1
+fargate_spot_weight  = 3
 container_port       = 8080
 db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
@@ -14,6 +17,7 @@ alarm_email          = ""
 # Required — ACM certificate in the same region as aws_region
 acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# Sandbox defaults (override for real prod)
-skip_final_snapshot = true
-deletion_protection = false
+# Production defaults (skip_final_snapshot=false, deletion_protection=true in variables.tf).
+# For sandbox teardown only, override:
+# skip_final_snapshot = true
+# deletion_protection = false

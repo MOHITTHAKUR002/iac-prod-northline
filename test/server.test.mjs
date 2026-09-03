@@ -37,6 +37,8 @@ describe('api/server.js', () => {
         DB_HOST: 'postgres.local',
         DB_PORT: '5432',
         DB_NAME: 'northlineprod',
+        DB_USER: 'dbadmin',
+        DB_PASSWORD: 'test-secret',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });

@@ -6,12 +6,14 @@ const PORT = Number(process.env.PORT || 8080);
 const DB_HOST = process.env.DB_HOST || '';
 const DB_PORT = process.env.DB_PORT || '5432';
 const DB_NAME = process.env.DB_NAME || '';
+const DB_USER = process.env.DB_USER || '';
+const DB_PASSWORD = process.env.DB_PASSWORD || '';
 
 let shuttingDown = false;
 let server = null;
 
 function dbConfigured() {
-  return Boolean(DB_HOST && DB_NAME);
+  return Boolean(DB_HOST && DB_NAME && DB_USER && DB_PASSWORD);
 }
 
 function sendJson(res, statusCode, body) {
@@ -44,6 +46,8 @@ function handleRequest(req, res) {
         host: DB_HOST ? 'configured' : 'missing',
         port: DB_PORT,
         name: DB_NAME ? 'configured' : 'missing',
+        user: DB_USER ? 'configured' : 'missing',
+        password: DB_PASSWORD ? 'configured' : 'missing',
       },
     });
     return;

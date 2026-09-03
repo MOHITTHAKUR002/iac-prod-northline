@@ -21,6 +21,7 @@ locals {
 resource "aws_iam_role" "ecs_task_execution" {
   name               = "${local.name_prefix}-ecs-exec"
   assume_role_policy = local.ecs_assume
+  tags               = { Name = "${local.name_prefix}-ecs-exec" }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
@@ -34,10 +35,14 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid      = "ReadAppSecrets"
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
-      Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*"
+      Sid    = "ReadAppAndRdsSecrets"
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+      Resource = [
+        "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*",
+        var.master_user_secret_arn,
+        "${var.master_user_secret_arn}*",
+      ]
     }]
   })
 }
@@ -45,6 +50,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
 resource "aws_iam_role" "ecs_task" {
   name               = "${local.name_prefix}-ecs-task"
   assume_role_policy = local.ecs_assume
+  tags               = { Name = "${local.name_prefix}-ecs-task" }
 }
 
 resource "aws_iam_role_policy" "ecs_task" {
