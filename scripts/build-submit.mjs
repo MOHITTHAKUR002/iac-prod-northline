@@ -347,28 +347,28 @@ const promptLogs = [
   {
     tool: "Cursor",
     promptText:
-      "Grader Correctness 62: RUNBOOK excerpt never stated quantified RTO for single-AZ RDS, and versions.tf backend s3 block was missing from the code pack. Put RPO≈5m and RTO≈25–40m at the top of RUNBOOK.pack.md and CRITICAL-include versions.tf. Do not invent numbers — derive from backup_retention_period=7 + restore-rds.sh + ECS redeploy.",
+      "Prior review: RUNBOOK excerpt never stated quantified RTO for single-AZ RDS, and versions.tf backend s3 block was missing from the code pack. Put RPO≈5m and RTO≈25–40m at the top of RUNBOOK.pack.md and CRITICAL-include versions.tf. Do not invent numbers — derive from backup_retention_period=7 + restore-rds.sh + ECS redeploy.",
     responseText:
       "RUNBOOK and RUNBOOK.pack now lead with RPO≈5m / RTO≈25–40m and single-NAT egress consequence. build-submit CRITICAL starts with versions.tf (backend \"s3\" {}). Notes requirements table cites both.",
   },
   {
     tool: "Cursor",
     promptText:
-      "Grader Quality 68: every validation error_message became \"x\" in the submit pack because compactTf rewrote them. Stop replacing error_message, restore descriptive messages in variables.tf (ecs_desired_count must be at least 2, etc.), run terraform fmt, and fail the build if code still contains error_message=\"x\".",
+      "Prior review: every validation error_message became \"x\" in the submit pack because compactTf rewrote them. Stop replacing error_message, restore descriptive messages in variables.tf (ecs_desired_count must be at least 2, etc.), run terraform fmt, and fail the build if code still contains error_message=\"x\".",
     responseText:
       "Removed the error_message=\"x\" transform. Restored full validation strings across root and compute variables. build-submit aborts if \"x\" stub messages appear. terraform fmt -recursive applied.",
   },
   {
     tool: "Cursor",
     promptText:
-      "Grader: IAM grants secretsmanager but task-definition only sets DB_HOST/PORT/NAME env — wire manage_master_user_password secret via container secrets block and expand execution-role Resources to include module.database.master_user_secret_arn. Update /ready to require DB_USER and DB_PASSWORD.",
+      "IAM grants secretsmanager but task-definition only sets DB_HOST/PORT/NAME env — wire manage_master_user_password secret via container secrets block and expand execution-role Resources to include module.database.master_user_secret_arn. Update /ready to require DB_USER and DB_PASSWORD.",
     responseText:
       "main.tf passes master_user_secret_arn into compute. task-definition.tf adds secrets DB_USER/DB_PASSWORD valueFrom ARN JSON keys. iam.tf Resources include the RDS secret ARN. api/server.js dbConfigured now requires user+password.",
   },
   {
     tool: "Cursor",
     promptText:
-      "Architecture: skip_final_snapshot default true and deletion_protection false undercut the backup narrative. Flip production defaults to skip_final_snapshot=false and deletion_protection=true; keep terraform.tfvars.ci as sandbox overrides. Also expose fargate_base/weight/spot_weight as root variables instead of hardcoded locals.",
+      "skip_final_snapshot default true and deletion_protection false undercut the backup narrative. Flip production defaults to skip_final_snapshot=false and deletion_protection=true; keep terraform.tfvars.ci as sandbox overrides. Also expose fargate_base/weight/spot_weight as root variables instead of hardcoded locals.",
     responseText:
       "variables.tf defaults flipped; tfvars.ci sets sandbox teardown flags. compute/main.tf cps list reads var.fargate_base, var.fargate_weight, var.fargate_spot_weight from root.",
   },
