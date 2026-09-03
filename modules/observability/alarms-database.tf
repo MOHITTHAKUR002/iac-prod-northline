@@ -8,12 +8,8 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   statistic           = "Average"
   threshold           = 80
   treat_missing_data  = "notBreaching"
-  alarm_description   = "RDS CPU utilization high"
   alarm_actions       = [aws_sns_topic.alarms.arn]
-
-  dimensions = {
-    DBInstanceIdentifier = var.db_instance_id
-  }
+  dimensions          = { DBInstanceIdentifier = var.db_instance_id }
 }
 
 resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
@@ -26,10 +22,6 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
   statistic           = "Average"
   threshold           = 2147483648
   treat_missing_data  = "notBreaching"
-  alarm_description   = "RDS free storage below 2 GiB"
   alarm_actions       = [aws_sns_topic.alarms.arn]
-
-  dimensions = {
-    DBInstanceIdentifier = var.db_instance_id
-  }
+  dimensions          = { DBInstanceIdentifier = var.db_instance_id }
 }

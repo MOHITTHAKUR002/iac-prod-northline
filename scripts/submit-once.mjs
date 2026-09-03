@@ -68,6 +68,8 @@ const payload = {
   },
   promptLogs: p.promptLogs,
 };
+// Caliber only accepts Antier GitLab MR URLs in mergeRequestUrl.
+// GitHub repo links go in notes (already included in SUBMIT_PREVIEW answer).
 if (p.mergeRequestUrl && p.mergeRequestUrl.includes("repo.antiersolutions.com")) {
   payload.mergeRequestUrl = p.mergeRequestUrl;
 }

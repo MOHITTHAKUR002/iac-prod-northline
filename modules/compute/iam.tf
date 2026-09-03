@@ -1,36 +1,26 @@
-data "aws_iam_policy_document" "ecs_task_execution_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-
-    condition {
-      test     = "ArnLike"
-      variable = "aws:SourceArn"
-      values = [
-        "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster/${local.name_prefix}-cluster",
-        "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:task-definition/${local.name_prefix}-api:*"
-      ]
-    }
-  }
+locals {
+  ecs_assume = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Condition = {
+        StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+        ArnLike = {
+          "aws:SourceArn" = [
+            "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster/${local.name_prefix}-cluster",
+            "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:task-definition/${local.name_prefix}-api:*",
+          ]
+        }
+      }
+    }]
+  })
 }
 
 resource "aws_iam_role" "ecs_task_execution" {
   name               = "${local.name_prefix}-ecs-exec"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_execution_assume.json
-
-  tags = {
-    Name = "${local.name_prefix}-ecs-exec"
-  }
+  assume_role_policy = local.ecs_assume
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
@@ -39,76 +29,42 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
-  name   = "${local.name_prefix}-ecs-exec-secrets"
-  role   = aws_iam_role.ecs_task_execution.id
-  policy = data.aws_iam_policy_document.ecs_task_execution_secrets.json
-}
-
-data "aws_iam_policy_document" "ecs_task_execution_secrets" {
-  statement {
-    sid    = "ReadAppSecrets"
-    effect = "Allow"
-    actions = [
-      "secretsmanager:GetSecretValue",
-      "secretsmanager:DescribeSecret"
-    ]
-    resources = ["arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*"]
-  }
-}
-
-data "aws_iam_policy_document" "ecs_task_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
+  name = "${local.name_prefix}-ecs-exec-secrets"
+  role = aws_iam_role.ecs_task_execution.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "ReadAppSecrets"
+      Effect   = "Allow"
+      Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+      Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${local.name_prefix}/*"
+    }]
+  })
 }
 
 resource "aws_iam_role" "ecs_task" {
   name               = "${local.name_prefix}-ecs-task"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
-
-  tags = {
-    Name = "${local.name_prefix}-ecs-task"
-  }
-}
-
-data "aws_iam_policy_document" "ecs_task" {
-  statement {
-    sid    = "ReadAssetsBucket"
-    effect = "Allow"
-    actions = [
-      "s3:GetObject",
-      "s3:ListBucket"
-    ]
-    resources = [
-      var.assets_bucket_arn,
-      "${var.assets_bucket_arn}/*"
-    ]
-  }
-
-  statement {
-    sid    = "WriteApplicationLogs"
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogStream",
-      "logs:PutLogEvents"
-    ]
-    resources = ["${aws_cloudwatch_log_group.api.arn}:*"]
-  }
+  assume_role_policy = local.ecs_assume
 }
 
 resource "aws_iam_role_policy" "ecs_task" {
-  name   = "${local.name_prefix}-ecs-task"
-  role   = aws_iam_role.ecs_task.id
-  policy = data.aws_iam_policy_document.ecs_task.json
+  name = "${local.name_prefix}-ecs-task"
+  role = aws_iam_role.ecs_task.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ReadAssetsBucket"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:ListBucket"]
+        Resource = [var.assets_bucket_arn, "${var.assets_bucket_arn}/*"]
+      },
+      {
+        Sid      = "WriteApplicationLogs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = "${aws_cloudwatch_log_group.api.arn}:*"
+      },
+    ]
+  })
 }

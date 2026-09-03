@@ -1,55 +1,58 @@
-module.storage.data.aws_caller_identity.current: Reading...
-module.compute.data.aws_caller_identity.current: Reading...
-module.compute.data.aws_region.current: Reading...
 module.networking.data.aws_region.current: Reading...
+module.storage.data.aws_caller_identity.current: Reading...
+module.compute.data.aws_region.current: Reading...
+module.compute.data.aws_caller_identity.current: Reading...
 module.networking.data.aws_region.current: Read complete after 0s [id=us-east-1]
 module.compute.data.aws_region.current: Read complete after 0s [id=us-east-1]
-module.storage.data.aws_caller_identity.current: Read complete after 0s [id=123456789012]
 module.compute.data.aws_caller_identity.current: Read complete after 0s [id=123456789012]
-module.compute.data.aws_iam_policy_document.ecs_task_execution_secrets: Reading...
-module.compute.data.aws_iam_policy_document.ecs_task_execution_assume: Reading...
-module.compute.data.aws_iam_policy_document.ecs_task_execution_secrets: Read complete after 0s [id=3576661793]
-module.compute.data.aws_iam_policy_document.ecs_task_assume: Reading...
-module.compute.data.aws_iam_policy_document.ecs_task_execution_assume: Read complete after 0s [id=3685876003]
-module.compute.data.aws_iam_policy_document.ecs_task_assume: Read complete after 0s [id=2209544643]
+module.storage.data.aws_caller_identity.current: Read complete after 0s [id=123456789012]
 
 Terraform used the selected providers to generate the following execution
 plan. Resource actions are indicated with the following symbols:
   + create
- <= read (data resources)
 
 Terraform will perform the following actions:
 
-  # module.compute.data.aws_iam_policy_document.ecs_task will be read during apply
-  # (config refers to values not yet known)
- <= data "aws_iam_policy_document" "ecs_task" {
-      + id            = (known after apply)
-      + json          = (known after apply)
-      + minified_json = (known after apply)
+  # module.compute.aws_appautoscaling_policy.api_cpu will be created
+  + resource "aws_appautoscaling_policy" "api_cpu" {
+      + alarm_arns         = (known after apply)
+      + arn                = (known after apply)
+      + id                 = (known after apply)
+      + name               = "northline-ci-api-cpu"
+      + policy_type        = "TargetTrackingScaling"
+      + resource_id        = "service/northline-ci-cluster/northline-ci-api"
+      + scalable_dimension = "ecs:service:DesiredCount"
+      + service_namespace  = "ecs"
 
-      + statement {
-          + actions   = [
-              + "s3:GetObject",
-              + "s3:ListBucket",
-            ]
-          + effect    = "Allow"
-          + resources = [
-              + (known after apply),
-              + (known after apply),
-            ]
-          + sid       = "ReadAssetsBucket"
+      + target_tracking_scaling_policy_configuration {
+          + disable_scale_in   = false
+          + scale_in_cooldown  = 300
+          + scale_out_cooldown = 60
+          + target_value       = 70
+
+          + predefined_metric_specification {
+              + predefined_metric_type = "ECSServiceAverageCPUUtilization"
+            }
         }
-      + statement {
-          + actions   = [
-              + "logs:CreateLogStream",
-              + "logs:PutLogEvents",
-            ]
-          + effect    = "Allow"
-          + resources = [
-              + (known after apply),
-            ]
-          + sid       = "WriteApplicationLogs"
+    }
+
+  # module.compute.aws_appautoscaling_target.api will be created
+  + resource "aws_appautoscaling_target" "api" {
+      + arn                = (known after apply)
+      + id                 = (known after apply)
+      + max_capacity       = 4
+      + min_capacity       = 2
+      + resource_id        = "service/northline-ci-cluster/northline-ci-api"
+      + role_arn           = (known after apply)
+      + scalable_dimension = "ecs:service:DesiredCount"
+      + service_namespace  = "ecs"
+      + tags_all           = {
+          + "Environment" = "ci"
+          + "ManagedBy"   = "terraform"
+          + "Project"     = "northline"
         }
+
+      + suspended_state (known after apply)
     }
 
   # module.compute.aws_cloudwatch_log_group.api will be created
@@ -126,13 +129,9 @@ Terraform will perform the following actions:
       + arn      = (known after apply)
       + id       = (known after apply)
       + name     = "northline-ci-cluster"
-      + tags     = {
-          + "Name" = "northline-ci-cluster"
-        }
       + tags_all = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-cluster"
           + "Project"     = "northline"
         }
 
@@ -150,17 +149,6 @@ Terraform will perform the following actions:
         ]
       + cluster_name       = "northline-ci-cluster"
       + id                 = (known after apply)
-
-      + default_capacity_provider_strategy {
-          + base              = 0
-          + capacity_provider = "FARGATE_SPOT"
-          + weight            = 3
-        }
-      + default_capacity_provider_strategy {
-          + base              = 1
-          + capacity_provider = "FARGATE"
-          + weight            = 1
-        }
     }
 
   # module.compute.aws_ecs_service.api will be created
@@ -178,13 +166,9 @@ Terraform will perform the following actions:
       + name                               = "northline-ci-api"
       + platform_version                   = (known after apply)
       + scheduling_strategy                = "REPLICA"
-      + tags                               = {
-          + "Name" = "northline-ci-api-service"
-        }
       + tags_all                           = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-api-service"
           + "Project"     = "northline"
         }
       + task_definition                    = (known after apply)
@@ -261,6 +245,12 @@ Terraform will perform the following actions:
                   + {
                       + Action    = "sts:AssumeRole"
                       + Condition = {
+                          + ArnLike      = {
+                              + "aws:SourceArn" = [
+                                  + "arn:aws:ecs:us-east-1:123456789012:cluster/northline-ci-cluster",
+                                  + "arn:aws:ecs:us-east-1:123456789012:task-definition/northline-ci-api:*",
+                                ]
+                            }
                           + StringEquals = {
                               + "aws:SourceAccount" = "123456789012"
                             }
@@ -282,13 +272,9 @@ Terraform will perform the following actions:
       + name                  = "northline-ci-ecs-task"
       + name_prefix           = (known after apply)
       + path                  = "/"
-      + tags                  = {
-          + "Name" = "northline-ci-ecs-task"
-        }
       + tags_all              = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-ecs-task"
           + "Project"     = "northline"
         }
       + unique_id             = (known after apply)
@@ -332,13 +318,9 @@ Terraform will perform the following actions:
       + name                  = "northline-ci-ecs-exec"
       + name_prefix           = (known after apply)
       + path                  = "/"
-      + tags                  = {
-          + "Name" = "northline-ci-ecs-exec"
-        }
       + tags_all              = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-ecs-exec"
           + "Project"     = "northline"
         }
       + unique_id             = (known after apply)
@@ -485,13 +467,12 @@ Terraform will perform the following actions:
   # module.database.aws_security_group.rds will be created
   + resource "aws_security_group" "rds" {
       + arn                    = (known after apply)
-      + description            = "PostgreSQL access from ECS tasks only"
+      + description            = "Managed by Terraform"
       + egress                 = (known after apply)
       + id                     = (known after apply)
       + ingress                = [
           + {
               + cidr_blocks      = []
-              + description      = "PostgreSQL from ECS tasks"
               + from_port        = 5432
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -499,19 +480,16 @@ Terraform will perform the following actions:
               + security_groups  = (known after apply)
               + self             = false
               + to_port          = 5432
+                # (1 unchanged attribute hidden)
             },
         ]
       + name                   = "northline-ci-rds-sg"
       + name_prefix            = (known after apply)
       + owner_id               = (known after apply)
       + revoke_rules_on_delete = false
-      + tags                   = {
-          + "Name" = "northline-ci-rds-sg"
-        }
       + tags_all               = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-rds-sg"
           + "Project"     = "northline"
         }
       + vpc_id                 = (known after apply)
@@ -866,13 +844,12 @@ Terraform will perform the following actions:
   # module.networking.aws_security_group.alb will be created
   + resource "aws_security_group" "alb" {
       + arn                    = (known after apply)
-      + description            = "Allow inbound HTTP/HTTPS to ALB"
+      + description            = "Managed by Terraform"
       + egress                 = [
           + {
               + cidr_blocks      = [
                   + "0.0.0.0/0",
                 ]
-              + description      = "All outbound"
               + from_port        = 0
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -880,6 +857,7 @@ Terraform will perform the following actions:
               + security_groups  = []
               + self             = false
               + to_port          = 0
+                # (1 unchanged attribute hidden)
             },
         ]
       + id                     = (known after apply)
@@ -888,20 +866,6 @@ Terraform will perform the following actions:
               + cidr_blocks      = [
                   + "0.0.0.0/0",
                 ]
-              + description      = "HTTP from internet (redirects to HTTPS)"
-              + from_port        = 80
-              + ipv6_cidr_blocks = []
-              + prefix_list_ids  = []
-              + protocol         = "tcp"
-              + security_groups  = []
-              + self             = false
-              + to_port          = 80
-            },
-          + {
-              + cidr_blocks      = [
-                  + "0.0.0.0/0",
-                ]
-              + description      = "HTTPS from internet"
               + from_port        = 443
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -909,19 +873,29 @@ Terraform will perform the following actions:
               + security_groups  = []
               + self             = false
               + to_port          = 443
+                # (1 unchanged attribute hidden)
+            },
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + from_port        = 80
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 80
+                # (1 unchanged attribute hidden)
             },
         ]
       + name                   = "northline-ci-alb-sg"
       + name_prefix            = (known after apply)
       + owner_id               = (known after apply)
       + revoke_rules_on_delete = false
-      + tags                   = {
-          + "Name" = "northline-ci-alb-sg"
-        }
       + tags_all               = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-alb-sg"
           + "Project"     = "northline"
         }
       + vpc_id                 = (known after apply)
@@ -930,13 +904,12 @@ Terraform will perform the following actions:
   # module.networking.aws_security_group.ecs_tasks will be created
   + resource "aws_security_group" "ecs_tasks" {
       + arn                    = (known after apply)
-      + description            = "ECS task ENI security group"
+      + description            = "Managed by Terraform"
       + egress                 = [
           + {
               + cidr_blocks      = [
                   + "0.0.0.0/0",
                 ]
-              + description      = "All outbound"
               + from_port        = 0
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -944,13 +917,13 @@ Terraform will perform the following actions:
               + security_groups  = []
               + self             = false
               + to_port          = 0
+                # (1 unchanged attribute hidden)
             },
         ]
       + id                     = (known after apply)
       + ingress                = [
           + {
               + cidr_blocks      = []
-              + description      = "Traffic from ALB"
               + from_port        = 8080
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -958,19 +931,16 @@ Terraform will perform the following actions:
               + security_groups  = (known after apply)
               + self             = false
               + to_port          = 8080
+                # (1 unchanged attribute hidden)
             },
         ]
       + name                   = "northline-ci-ecs-tasks-sg"
       + name_prefix            = (known after apply)
       + owner_id               = (known after apply)
       + revoke_rules_on_delete = false
-      + tags                   = {
-          + "Name" = "northline-ci-ecs-tasks-sg"
-        }
       + tags_all               = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-ecs-tasks-sg"
           + "Project"     = "northline"
         }
       + vpc_id                 = (known after apply)
@@ -979,13 +949,12 @@ Terraform will perform the following actions:
   # module.networking.aws_security_group.vpc_endpoints will be created
   + resource "aws_security_group" "vpc_endpoints" {
       + arn                    = (known after apply)
-      + description            = "Allow HTTPS from private subnets to interface endpoints"
+      + description            = "Managed by Terraform"
       + egress                 = [
           + {
               + cidr_blocks      = [
                   + "0.0.0.0/0",
                 ]
-              + description      = "All outbound"
               + from_port        = 0
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -993,6 +962,7 @@ Terraform will perform the following actions:
               + security_groups  = []
               + self             = false
               + to_port          = 0
+                # (1 unchanged attribute hidden)
             },
         ]
       + id                     = (known after apply)
@@ -1001,7 +971,6 @@ Terraform will perform the following actions:
               + cidr_blocks      = [
                   + "10.0.0.0/16",
                 ]
-              + description      = "HTTPS from VPC"
               + from_port        = 443
               + ipv6_cidr_blocks = []
               + prefix_list_ids  = []
@@ -1009,6 +978,7 @@ Terraform will perform the following actions:
               + security_groups  = []
               + self             = false
               + to_port          = 443
+                # (1 unchanged attribute hidden)
             },
         ]
       + name                   = "northline-ci-vpc-endpoints-sg"
@@ -1176,8 +1146,8 @@ Terraform will perform the following actions:
         }
     }
 
-  # module.networking.aws_vpc_endpoint.ecr_api will be created
-  + resource "aws_vpc_endpoint" "ecr_api" {
+  # module.networking.aws_vpc_endpoint.interface["ecr.api"] will be created
+  + resource "aws_vpc_endpoint" "interface" {
       + arn                   = (known after apply)
       + cidr_blocks           = (known after apply)
       + dns_entry             = (known after apply)
@@ -1212,8 +1182,8 @@ Terraform will perform the following actions:
       + subnet_configuration (known after apply)
     }
 
-  # module.networking.aws_vpc_endpoint.ecr_dkr will be created
-  + resource "aws_vpc_endpoint" "ecr_dkr" {
+  # module.networking.aws_vpc_endpoint.interface["ecr.dkr"] will be created
+  + resource "aws_vpc_endpoint" "interface" {
       + arn                   = (known after apply)
       + cidr_blocks           = (known after apply)
       + dns_entry             = (known after apply)
@@ -1248,8 +1218,8 @@ Terraform will perform the following actions:
       + subnet_configuration (known after apply)
     }
 
-  # module.networking.aws_vpc_endpoint.logs will be created
-  + resource "aws_vpc_endpoint" "logs" {
+  # module.networking.aws_vpc_endpoint.interface["logs"] will be created
+  + resource "aws_vpc_endpoint" "interface" {
       + arn                   = (known after apply)
       + cidr_blocks           = (known after apply)
       + dns_entry             = (known after apply)
@@ -1274,6 +1244,42 @@ Terraform will perform the following actions:
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
           + "Name"        = "northline-ci-logs-endpoint"
+          + "Project"     = "northline"
+        }
+      + vpc_endpoint_type     = "Interface"
+      + vpc_id                = (known after apply)
+
+      + dns_options (known after apply)
+
+      + subnet_configuration (known after apply)
+    }
+
+  # module.networking.aws_vpc_endpoint.interface["secretsmanager"] will be created
+  + resource "aws_vpc_endpoint" "interface" {
+      + arn                   = (known after apply)
+      + cidr_blocks           = (known after apply)
+      + dns_entry             = (known after apply)
+      + id                    = (known after apply)
+      + ip_address_type       = (known after apply)
+      + network_interface_ids = (known after apply)
+      + owner_id              = (known after apply)
+      + policy                = (known after apply)
+      + prefix_list_id        = (known after apply)
+      + private_dns_enabled   = true
+      + requester_managed     = (known after apply)
+      + route_table_ids       = (known after apply)
+      + security_group_ids    = (known after apply)
+      + service_name          = "com.amazonaws.us-east-1.secretsmanager"
+      + service_region        = (known after apply)
+      + state                 = (known after apply)
+      + subnet_ids            = (known after apply)
+      + tags                  = {
+          + "Name" = "northline-ci-secretsmanager-endpoint"
+        }
+      + tags_all              = {
+          + "Environment" = "ci"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "northline-ci-secretsmanager-endpoint"
           + "Project"     = "northline"
         }
       + vpc_endpoint_type     = "Interface"
@@ -1320,47 +1326,10 @@ Terraform will perform the following actions:
       + subnet_configuration (known after apply)
     }
 
-  # module.networking.aws_vpc_endpoint.secretsmanager will be created
-  + resource "aws_vpc_endpoint" "secretsmanager" {
-      + arn                   = (known after apply)
-      + cidr_blocks           = (known after apply)
-      + dns_entry             = (known after apply)
-      + id                    = (known after apply)
-      + ip_address_type       = (known after apply)
-      + network_interface_ids = (known after apply)
-      + owner_id              = (known after apply)
-      + policy                = (known after apply)
-      + prefix_list_id        = (known after apply)
-      + private_dns_enabled   = true
-      + requester_managed     = (known after apply)
-      + route_table_ids       = (known after apply)
-      + security_group_ids    = (known after apply)
-      + service_name          = "com.amazonaws.us-east-1.secretsmanager"
-      + service_region        = (known after apply)
-      + state                 = (known after apply)
-      + subnet_ids            = (known after apply)
-      + tags                  = {
-          + "Name" = "northline-ci-secretsmanager-endpoint"
-        }
-      + tags_all              = {
-          + "Environment" = "ci"
-          + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-secretsmanager-endpoint"
-          + "Project"     = "northline"
-        }
-      + vpc_endpoint_type     = "Interface"
-      + vpc_id                = (known after apply)
-
-      + dns_options (known after apply)
-
-      + subnet_configuration (known after apply)
-    }
-
-  # module.observability.aws_cloudwatch_metric_alarm.alb_5xx will be created
-  + resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+  # module.observability.aws_cloudwatch_metric_alarm.alb["5xx"] will be created
+  + resource "aws_cloudwatch_metric_alarm" "alb" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "ALB target 5xx responses exceeded threshold"
       + alarm_name                            = "northline-ci-alb-5xx"
       + arn                                   = (known after apply)
       + comparison_operator                   = "GreaterThanThreshold"
@@ -1381,11 +1350,10 @@ Terraform will perform the following actions:
       + treat_missing_data                    = "notBreaching"
     }
 
-  # module.observability.aws_cloudwatch_metric_alarm.alb_unhealthy_hosts will be created
-  + resource "aws_cloudwatch_metric_alarm" "alb_unhealthy_hosts" {
+  # module.observability.aws_cloudwatch_metric_alarm.alb["unhealthy"] will be created
+  + resource "aws_cloudwatch_metric_alarm" "alb" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "ALB has unhealthy targets"
       + alarm_name                            = "northline-ci-alb-unhealthy"
       + arn                                   = (known after apply)
       + comparison_operator                   = "GreaterThanThreshold"
@@ -1410,7 +1378,6 @@ Terraform will perform the following actions:
   + resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "ECS service CPU utilization high"
       + alarm_name                            = "northline-ci-ecs-cpu"
       + arn                                   = (known after apply)
       + comparison_operator                   = "GreaterThanThreshold"
@@ -1438,7 +1405,6 @@ Terraform will perform the following actions:
   + resource "aws_cloudwatch_metric_alarm" "nat_packet_drop" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "NAT gateway port allocation errors"
       + alarm_name                            = "northline-ci-nat-drops"
       + arn                                   = (known after apply)
       + comparison_operator                   = "GreaterThanThreshold"
@@ -1463,7 +1429,6 @@ Terraform will perform the following actions:
   + resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "RDS CPU utilization high"
       + alarm_name                            = "northline-ci-rds-cpu"
       + arn                                   = (known after apply)
       + comparison_operator                   = "GreaterThanThreshold"
@@ -1488,7 +1453,6 @@ Terraform will perform the following actions:
   + resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
       + actions_enabled                       = true
       + alarm_actions                         = (known after apply)
-      + alarm_description                     = "RDS free storage below 2 GiB"
       + alarm_name                            = "northline-ci-rds-storage"
       + arn                                   = (known after apply)
       + comparison_operator                   = "LessThanThreshold"
@@ -1522,13 +1486,9 @@ Terraform will perform the following actions:
       + owner                       = (known after apply)
       + policy                      = (known after apply)
       + signature_version           = (known after apply)
-      + tags                        = {
-          + "Name" = "northline-ci-alarms"
-        }
       + tags_all                    = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-alarms"
           + "Project"     = "northline"
         }
       + tracing_config              = (known after apply)
@@ -1550,13 +1510,9 @@ Terraform will perform the following actions:
       + policy                      = (known after apply)
       + region                      = (known after apply)
       + request_payer               = (known after apply)
-      + tags                        = {
-          + "Name" = "northline-ci-assets"
-        }
       + tags_all                    = {
           + "Environment" = "ci"
           + "ManagedBy"   = "terraform"
-          + "Name"        = "northline-ci-assets"
           + "Project"     = "northline"
         }
       + website_domain              = (known after apply)
@@ -1615,7 +1571,7 @@ Terraform will perform the following actions:
         }
     }
 
-Plan: 53 to add, 0 to change, 0 to destroy.
+Plan: 55 to add, 0 to change, 0 to destroy.
 
 Changes to Outputs:
   + alb_dns_name       = (known after apply)
@@ -1630,7 +1586,7 @@ Changes to Outputs:
           + "us-east-1b",
         ]
       + nat_gateway_az        = "us-east-1a"
-      + note                  = "Single NAT saves ~$32/mo; cross-AZ egress for non-NAT AZ tasks."
+      + note                  = "Single NAT saves ~$32/mo"
       + rds_availability_zone = (known after apply)
       + single_nat_risk       = true
     }

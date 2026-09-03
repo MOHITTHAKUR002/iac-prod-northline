@@ -36,9 +36,11 @@ Root `main.tf` wires modules only — no `resource` blocks at root. Compute does
 |--------|-------------|
 | Single-AZ RDS (`multi_az = false`, `db.t4g.micro`) | RPO ~5 min, RTO 20–40 min on AZ failure (estimate, not drill-verified) |
 | Single NAT in `aws_subnet.public[0]` | Cross-AZ egress risk — `failure_domains.single_nat_risk` output |
-| Fargate Spot with **on-demand base=1** | ≥1 task always on FARGATE; Spot fills remaining weight — not Spot-only |
+| Fargate Spot with **on-demand base=1** | ≥1 task always on FARGATE; Spot fills remaining weight — not Spot-only; reclaim → ~1–3 min reduced capacity |
+| ECS CPU target-tracking autoscaling (`ecs_max_capacity` default 4) | Scales under load without jumping to 20 tasks and blowing the $150 cap |
+| Single `var.container_port` at root | Passed into networking SG, load_balancing TG, and compute task — no hardcoded 8080 drift |
 
-Estimated **~$132/mo** (README cost table).
+Estimated **~$132/mo** (itemized in RUNBOOK.md / README cost table). Restore helper: `scripts/restore-rds.sh`.
 
 ### Remote state
 

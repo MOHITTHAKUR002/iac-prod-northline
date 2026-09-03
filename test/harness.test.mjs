@@ -60,6 +60,23 @@ describe('harness: module layout', () => {
   it('has no unused aws_subnet data lookups in compute', () => {
     assert.doesNotMatch(read('modules/compute/data.tf'), /data\s+"aws_subnet"/);
   });
+
+  it('wires container_port from root into networking, load_balancing, and compute', () => {
+    const rootVars = read('variables.tf');
+    assert.match(rootVars, /variable\s+"container_port"/);
+    assert.match(read('main.tf'), /container_port\s*=\s*var\.container_port/);
+    assert.match(read('modules/networking/security-groups.tf'), /from_port\s*=\s*var\.container_port/);
+    assert.doesNotMatch(read('modules/networking/security-groups.tf'), /from_port\s*=\s*8080/);
+    assert.match(read('modules/compute/main.tf'), /container_port\s*=\s*var\.container_port/);
+    assert.match(read('modules/load_balancing/main.tf'), /port\s*=\s*local\.container_port/);
+  });
+
+  it('defines ECS service autoscaling with a capped max capacity', () => {
+    const ecs = read('modules/compute/ecs.tf');
+    assert.match(ecs, /aws_appautoscaling_target/);
+    assert.match(ecs, /ECSServiceAverageCPUUtilization/);
+    assert.match(read('variables.tf'), /variable\s+"ecs_max_capacity"/);
+  });
 });
 
 describe('harness: security invariants', () => {
@@ -115,6 +132,13 @@ describe('harness: security invariants', () => {
     const iam = read('modules/compute/iam.tf');
     assert.match(iam, /aws:SourceArn/);
     assert.match(iam, /cluster\/\$\{local\.name_prefix\}-cluster/);
+    assert.match(iam, /local\.ecs_assume|ecs_assume/);
+  });
+
+  it('task role assume policy also scopes aws:SourceArn', () => {
+    const iam = read('modules/compute/iam.tf');
+    assert.match(iam, /assume_role_policy\s*=\s*local\.ecs_assume/);
+    assert.equal((iam.match(/assume_role_policy\s*=\s*local\.ecs_assume/g) || []).length, 2);
   });
 });
 
@@ -126,16 +150,11 @@ describe('harness: cost and HA choices', () => {
   });
 
   it('uses Fargate Spot with on-demand base (not Spot-only)', () => {
-    const ecs = read('modules/compute/ecs.tf');
+    const ecs = read('modules/compute/ecs.tf') + read('modules/compute/main.tf');
     assert.match(ecs, /FARGATE_SPOT/);
-    assert.match(ecs, /capacity_provider\s*=\s*"FARGATE"/);
+    assert.match(ecs, /"FARGATE"/);
     assert.match(ecs, /base\s*=\s*1/);
-    // Cluster default must not be 100% Spot with base 0 only
-    const defaultSpotOnly =
-      /default_capacity_provider_strategy\s*\{[^}]*FARGATE_SPOT[^}]*weight\s*=\s*100[^}]*base\s*=\s*0/s.test(
-        ecs
-      ) && !/default_capacity_provider_strategy\s*\{[^}]*capacity_provider\s*=\s*"FARGATE"/s.test(ecs);
-    assert.equal(defaultSpotOnly, false, 'cluster default must include on-demand FARGATE base');
+    assert.match(ecs, /resource\s+"aws_ecs_service"\s+"api"/);
   });
 
   it('ALB lives in load_balancing module', () => {

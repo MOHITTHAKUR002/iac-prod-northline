@@ -6,15 +6,10 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "assets" {
   bucket = "${local.name_prefix}-assets-${data.aws_caller_identity.current.account_id}"
-
-  tags = {
-    Name = "${local.name_prefix}-assets"
-  }
 }
 
 resource "aws_s3_bucket_public_access_block" "assets" {
-  bucket = aws_s3_bucket.assets.id
-
+  bucket                  = aws_s3_bucket.assets.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -23,18 +18,12 @@ resource "aws_s3_bucket_public_access_block" "assets" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
   bucket = aws_s3_bucket.assets.id
-
   rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }
 
 resource "aws_s3_bucket_versioning" "assets" {
   bucket = aws_s3_bucket.assets.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
+  versioning_configuration { status = "Enabled" }
 }

@@ -7,7 +7,8 @@ cd bootstrap && ../bin/terraform init && ../bin/terraform apply -var="project_pr
 ./scripts/write-backend-config.sh "$(cd bootstrap && ../bin/terraform output -raw state_bucket_name)" "$(cd bootstrap && ../bin/terraform output -raw dynamodb_table_name)"
 ./bin/terraform init -backend-config=backend.hcl
 ./bin/terraform plan -var-file=terraform.tfvars | tee evidence/plan.txt && ./bin/terraform apply -var-file=terraform.tfvars
+./scripts/restore-rds.sh northline-prod-postgres   # RTO drill helper
 ./bin/terraform destroy -var-file=terraform.tfvars
 ```
 
-Cost ~$132/mo: single-AZ RDS (RPO ~5m, RTO 20-40m estimate), single NAT, Fargate on-demand base=1 + Spot weight (not Spot-only). Modules: networking, storage, database, load_balancing, compute, observability.
+~$132/mo itemized (NAT~32 ALB~22 Fargate~20-28 RDS~15 endpoints~28). Single-AZ RDS RPO~5m; RTO estimate 20-40m (often longer — see restore script). Single NAT + VPC endpoints. Fargate base=1 on-demand + Spot weight=3; Spot reclaim ~1-3m reduced capacity; autoscaling max=4. `var.container_port` wires SG+TG+task.

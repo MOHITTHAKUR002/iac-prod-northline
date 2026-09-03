@@ -8,12 +8,8 @@ resource "aws_cloudwatch_metric_alarm" "nat_packet_drop" {
   statistic           = "Sum"
   threshold           = 0
   treat_missing_data  = "notBreaching"
-  alarm_description   = "NAT gateway port allocation errors"
   alarm_actions       = [aws_sns_topic.alarms.arn]
-
-  dimensions = {
-    NatGatewayId = var.nat_gateway_id
-  }
+  dimensions          = { NatGatewayId = var.nat_gateway_id }
 }
 
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
@@ -26,9 +22,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   statistic           = "Average"
   threshold           = 85
   treat_missing_data  = "notBreaching"
-  alarm_description   = "ECS service CPU utilization high"
   alarm_actions       = [aws_sns_topic.alarms.arn]
-
   dimensions = {
     ClusterName = var.ecs_cluster_name
     ServiceName = var.ecs_service_name

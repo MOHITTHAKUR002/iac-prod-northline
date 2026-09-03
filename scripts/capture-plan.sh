@@ -29,7 +29,7 @@ cd "${ROOT_DIR}"
 mkdir -p evidence
 
 use_live_aws=false
-if aws sts get-caller-identity >/dev/null 2>&1; then
+if [[ "${FORCE_MOTO:-}" != "1" ]] && aws sts get-caller-identity >/dev/null 2>&1; then
   use_live_aws=true
 fi
 
