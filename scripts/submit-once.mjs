@@ -28,7 +28,7 @@ if (code.length < 5000) {
   console.error("Refusing: code field too short (<5000 chars) — likely incomplete pack");
   process.exit(1);
 }
-if (/placeholder/i.test(code) || /placeholder/i.test(notes)) {
+if (/placeholder/i.test(code) || /placeholder/i.test(notes) || /placeholder/i.test(JSON.stringify(p.promptLogs ?? []))) {
   console.error('Refusing: payload contains "placeholder"');
   process.exit(1);
 }

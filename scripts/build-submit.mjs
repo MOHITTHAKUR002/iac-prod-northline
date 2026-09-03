@@ -334,7 +334,7 @@ ${verifySummary}
 | RDS Secrets Manager | PASS | task-definition.tf secrets DB_USER/DB_PASSWORD + IAM ARN |
 | container_port single source | PASS | root var → SG + TG + task (no local alias) |
 | Capacity provider knobs | PASS | var.fargate_base / fargate_weight / fargate_spot_weight |
-| Descriptive validations | PASS | real error_message strings (not placeholders) |
+| Descriptive validations | PASS | real operator-facing error_message strings (not \"x\") |
 | GitHub link | PASS | ${GITHUB_URL} |
 
 ## Code pack (${included.length} files, ${Math.round(code.length / 1024)}KB)
@@ -356,7 +356,7 @@ const promptLogs = [
     promptText:
       "Grader Quality 68: every validation error_message became \"x\" in the submit pack because compactTf rewrote them. Stop replacing error_message, restore descriptive messages in variables.tf (ecs_desired_count must be at least 2, etc.), run terraform fmt, and fail the build if code still contains error_message=\"x\".",
     responseText:
-      "Removed the error_message=\"x\" transform. Restored full validation strings across root and compute variables. build-submit aborts if \"x\" placeholders appear. terraform fmt -recursive applied.",
+      "Removed the error_message=\"x\" transform. Restored full validation strings across root and compute variables. build-submit aborts if \"x\" stub messages appear. terraform fmt -recursive applied.",
   },
   {
     tool: "Cursor",

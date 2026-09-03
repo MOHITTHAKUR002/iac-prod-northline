@@ -238,7 +238,7 @@ describe('harness: RUNBOOK operational disclosure', () => {
     assert.match(runbook, /deletion_protection\s*=\s*true/i);
   });
 
-  it('keeps descriptive validation error messages (not placeholders)', () => {
+  it('keeps descriptive validation error messages (not stub "x")', () => {
     const rootVars = read('variables.tf');
     assert.doesNotMatch(rootVars, /error_message\s*=\s*"x"/);
     assert.match(rootVars, /ecs_desired_count must be at least 2/);
